@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌊 Visualizador 3D - Acuario</title>
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- GLTFLoader -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #0f766e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            flex: 1;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* PANEL ENTORNO 3D */
+        .environment-panel {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .environment-header {
+            background: linear-gradient(135deg, #0891b2 0%, #0369a1 100%);
+            color: white;
+            padding: 15px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .environment-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .environment-stats {
+            font-size: 0.85em;
+            opacity: 0.9;
+        }
+
+        #canvas-environment {
+            width: 100%;
+            height: 600px;
+            background: linear-gradient(135deg, #1e40af 0%, #0369a1 50%, #164e63 100%);
+            display: block;
+            flex: 1;
+        }
+
+        .environment-footer {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        /* PANEL LATERAL */
+        .side-panel {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-section {
+            border-bottom: 1px solid #e5e7eb;
+            padding: 20px;
+        }
+
+        .panel-section:last-child {
+            border-bottom: none;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .panel-title {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* PREVIEW 3D */
+        .preview-box {
+            background: #f0f9ff;
+            border: 2px solid #0369a1;
+            border-radius: 8px;
+            padding: 0;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+
+        #canvas-preview {
+            width: 100%;
+            height: 250px;
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            display: block;
+        }
+
+        .preview-info {
+            padding: 12px;
+            background: #f0f9ff;
+            border-top: 1px solid #0369a1;
+            font-size: 0.85em;
+            color: #1e40af;
+        }
+
+        .preview-info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+        }
+
+        .preview-info-label {
+            font-weight: 600;
+        }
+
+        .preview-info-value {
+            text-align: right;
+            color: #0369a1;
+        }
+
+        /* API STATUS */
+        .api-status-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            color: #92400e;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .api-status-box.connected {
+            background: #dcfce7;
+            border-left-color: #22c55e;
+            color: #166534;
+        }
+
+        .api-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #f59e0b;
+            animation: pulse 2s infinite;
+        }
+
+        .api-status-dot.connected {
+            background: #22c55e;
+            animation: none;
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+        }
+
+        /* BOTONES */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-height: 45px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0891b2 0%, #0369a1 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(3, 105, 161, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #d1d5db;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* CONTADOR */
+        .counter-box {
+            background: #eff6ff;
+            border: 2px solid #0369a1;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .counter-number {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #0369a1;
+        }
+
+        .counter-label {
+            color: #0369a1;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        /* LISTA DE MODELOS */
+        .model-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .model-item {
+            background: #f3f4f6;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 3px solid #0369a1;
+        }
+
+        .model-item.current {
+            background: #dbeafe;
+            border-left-color: #22c55e;
+        }
+
+        .model-name {
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .model-time {
+            color: #6b7280;
+            font-size: 0.8em;
+        }
+
+        /* SCROLLBAR */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <div class="header">
+        <h1>
+            <span>🌊</span>
+            <span>Visualizador 3D</span>
+            <span>🐠</span>
+        </h1>
+        <p>Panel de visualización y carga de modelos 3D detectados</p>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <div class="main-container">
+        <!-- ENTORNO 3D PRINCIPAL -->
+        <div class="environment-panel">
+            <div class="environment-header">
+                <div class="environment-header-left">
+                    <span>🎮</span>
+                    <span>Entorno 3D</span>
+                </div>
+                <div class="environment-stats">
+                    <span id="env-model-count">0</span> modelos cargados
+                </div>
+            </div>
+            <canvas id="canvas-environment"></canvas>
+            <div class="environment-footer">
+                💡 Tip: Usa el ratón para rotar la vista (click derecho para pan, scroll para zoom)
+            </div>
+        </div>
+
+        <!-- PANEL LATERAL -->
+        <div class="side-panel">
+            <!-- API STATUS -->
+            <div class="panel-section">
+                <div class="api-status-box" id="api-status-box">
+                    <div class="api-status-dot" id="api-status-dot"></div>
+                    <span id="api-status-text">Conectando a API...</span>
+                </div>
+            </div>
+
+            <!-- PREVIEW 3D -->
+            <div class="panel-section">
+                <div class="panel-title">
+                    <span>👁️</span>
+                    <span>Preview</span>
+                </div>
+                <div class="preview-box">
+                    <canvas id="canvas-preview"></canvas>
+                    <div class="preview-info">
+                        <div class="preview-info-row">
+                            <span class="preview-info-label">Modelo:</span>
+                            <span class="preview-info-value" id="preview-model">-</span>
+                        </div>
+                        <div class="preview-info-row">
+                            <span class="preview-info-label">Marcador:</span>
+                            <span class="preview-info-value" id="preview-marker">-</span>
+                        </div>
+                        <div class="preview-info-row">
+                            <span class="preview-info-label">Detectado:</span>
+                            <span class="preview-info-value" id="preview-time">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CONTADOR -->
+            <div class="panel-section">
+                <div class="counter-box">
+                    <div class="counter-number" id="model-counter">0</div>
+                    <div class="counter-label">Instancias en entorno</div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn-primary" id="btn-add-model" disabled>
+                        ➕ Agregar
+                    </button>
+                    <button class="btn-secondary" id="btn-clear-all">
+                        🗑️ Limpiar
+                    </button>
+                </div>
+            </div>
+
+            <!-- HISTORIAL -->
+            <div class="panel-section">
+                <div class="panel-title">
+                    <span>📋</span>
+                    <span>Historial</span>
+                </div>
+                <div class="model-list" id="model-history">
+                    <div style="color: #999; text-align: center; padding: 20px;">
+                        Sin historial aún
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== CONFIGURACIÓN ====================
+        const API_BASE_URL = 'http://localhost:3001/api';
+        const MODELS_PATH = '../'; // Ruta a modelos GLB
+        const POLL_INTERVAL = 2000; // Consultar API cada 2 segundos
+
+        // ==================== VARIABLES DE ESTADO ====================
+        let environmentScene, environmentCamera, environmentRenderer, environmentControls;
+        let previewScene, previewCamera, previewRenderer;
+        let currentModel = null;
+        let currentModelData = null;
+        let modelsInEnvironment = [];
+        let apiConnected = false;
+        let pollTimeout = null;
+
+        const gltfLoader = new THREE.GLTFLoader();
+
+        // ==================== INICIALIZACIÓN ====================
+        async function init() {
+            try {
+                console.log('🚀 Inicializando Visualizador 3D...');
+                
+                initEnvironmentScene();
+                initPreviewScene();
+                await checkAPIConnection();
+                startPolling();
+
+                console.log('✅ Visualizador inicializado correctamente');
+
+            } catch (error) {
+                console.error('❌ Error en inicialización:', error);
+            }
+        }
+
+        function initEnvironmentScene() {
+            const canvas = document.getElementById('canvas-environment');
+            
+            // Escena
+            environmentScene = new THREE.Scene();
+            environmentScene.background = new THREE.Color(0x1e40af);
+            
+            // Cámara
+            environmentCamera = new THREE.PerspectiveCamera(
+                75,
+                canvas.clientWidth / canvas.clientHeight,
+                0.1,
+                1000
+            );
+            environmentCamera.position.set(0, 0, 3);
+
+            // Renderer
+            environmentRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+            environmentRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            environmentRenderer.shadowMap.enabled = true;
+
+            // Controles OrbitControls
+            environmentControls = new THREE.OrbitControls(environmentCamera, canvas);
+            environmentControls.enableDamping = true;
+            environmentControls.dampingFactor = 0.05;
+            environmentControls.autoRotate = true;
+            environmentControls.autoRotateSpeed = 2;
+
+            // Luces
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            environmentScene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 5, 5);
+            directionalLight.castShadow = true;
+            environmentScene.add(directionalLight);
+
+            // Grid (opcional pero visual)
+            const gridHelper = new THREE.GridHelper(10, 10, 0x444444, 0x888888);
+            gridHelper.material.transparent = true;
+            gridHelper.material.opacity = 0.2;
+            environmentScene.add(gridHelper);
+
+            // Render loop
+            animateEnvironment();
+        }
+
+        function initPreviewScene() {
+            const canvas = document.getElementById('canvas-preview');
+            
+            previewScene = new THREE.Scene();
+            previewScene.background = new THREE.Color(0xdbeafe);
+            
+            previewCamera = new THREE.PerspectiveCamera(
+                75,
+                canvas.clientWidth / canvas.clientHeight,
+                0.1,
+                1000
+            );
+            previewCamera.position.z = 2;
+
+            previewRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+            previewRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
+
+            // Luz para preview
+            const light = new THREE.HemisphereLight(0xffffff, 0x000000, 1);
+            previewScene.add(light);
+
+            // Render loop
+            animatePreview();
+        }
+
+        // ==================== API & POLLING ====================
+        async function checkAPIConnection() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                if (response.ok) {
+                    apiConnected = true;
+                    updateAPIStatus(true);
+                    console.log('✅ API conectada');
+                } else {
+                    throw new Error('API no responde');
+                }
+            } catch (error) {
+                console.error('❌ Error de conexión con API:', error);
+                apiConnected = false;
+                updateAPIStatus(false);
+            }
+        }
+
+        function startPolling() {
+            if (!apiConnected) {
+                console.warn('⚠️ Esperando conexión con API...');
+                pollTimeout = setTimeout(startPolling, POLL_INTERVAL);
+                return;
+            }
+
+            pollLatestModel();
+        }
+
+        async function pollLatestModel() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/latest-model`);
+                const data = await response.json();
+
+                if (data.success && data.data) {
+                    // Si hay un nuevo modelo
+                    if (!currentModelData || currentModelData.id !== data.data.id) {
+                        console.log('🆕 Nuevo modelo disponible:', data.data.name);
+                        currentModelData = data.data;
+                        await loadPreviewModel(data.data);
+                        addToHistory(data.data);
+                    }
+                }
+
+            } catch (error) {
+                console.error('❌ Error al consultar API:', error);
+                apiConnected = false;
+                updateAPIStatus(false);
+            }
+
+            // Siguiente polling
+            pollTimeout = setTimeout(pollLatestModel, POLL_INTERVAL);
+        }
+
+        // ==================== CARGA DE MODELOS ====================
+        async function loadPreviewModel(modelData) {
+            try {
+                // Limpiar preview anterior
+                previewScene.children = previewScene.children.filter(
+                    child => !(child instanceof THREE.Group || child.isMesh)
+                );
+
+                // Cargar nuevo modelo
+                const modelPath = MODELS_PATH + modelData.path;
+                
+                gltfLoader.load(
+                    modelPath,
+                    (gltf) => {
+                        currentModel = gltf.scene;
+                        
+                        // Centrar y escalar modelo
+                        const box = new THREE.Box3().setFromObject(currentModel);
+                        const size = box.getSize(new THREE.Vector3());
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        const scale = 1.5 / maxDim;
+                        currentModel.scale.multiplyScalar(scale);
+                        
+                        const center = box.getCenter(new THREE.Vector3());
+                        currentModel.position.sub(center);
+
+                        previewScene.add(currentModel);
+
+                        // Actualizar UI
+                        updatePreviewInfo(modelData);
+                        document.getElementById('btn-add-model').disabled = false;
+
+                        console.log('✅ Modelo cargado en preview');
+                    },
+                    undefined,
+                    (error) => {
+                        console.error('❌ Error al cargar modelo:', error);
+                    }
+                );
+
+            } catch (error) {
+                console.error('❌ Error en loadPreviewModel:', error);
+            }
+        }
+
+        function addModelToEnvironment() {
+            if (!currentModel) {
+                console.warn('⚠️ No hay modelo cargado');
+                return;
+            }
+
+            try {
+                // Clonar el modelo
+                const clonedModel = currentModel.clone();
+                
+                // Posición aleatoria
+                clonedModel.position.set(
+                    (Math.random() - 0.5) * 4,
+                    (Math.random() - 0.5) * 4,
+                    (Math.random() - 0.5) * 4
+                );
+
+                // Rotación aleatoria
+                clonedModel.rotation.set(
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI,
+                    Math.random() * Math.PI
+                );
+
+                environmentScene.add(clonedModel);
+                modelsInEnvironment.push({
+                    object: clonedModel,
+                    data: currentModelData,
+                    addedAt: new Date()
+                });
+
+                updateEnvironmentCounter();
+                console.log('✅ Modelo agregado al entorno');
+
+            } catch (error) {
+                console.error('❌ Error al agregar modelo:', error);
+            }
+        }
+
+        function clearAllModels() {
+            modelsInEnvironment.forEach(item => {
+                environmentScene.remove(item.object);
+            });
+            modelsInEnvironment = [];
+            updateEnvironmentCounter();
+            console.log('🗑️ Entorno limpiado');
+        }
+
+        // ==================== ACTUALIZACIÓN DE UI ====================
+        function updateAPIStatus(connected) {
+            const statusBox = document.getElementById('api-status-box');
+            const statusDot = document.getElementById('api-status-dot');
+            const statusText = document.getElementById('api-status-text');
+
+            if (connected) {
+                statusBox.classList.add('connected');
+                statusDot.classList.add('connected');
+                statusText.textContent = '✅ API conectada';
+            } else {
+                statusBox.classList.remove('connected');
+                statusDot.classList.remove('connected');
+                statusText.textContent = '❌ API desconectada';
+            }
+        }
+
+        function updatePreviewInfo(modelData) {
+            document.getElementById('preview-model').textContent = modelData.name;
+            document.getElementById('preview-marker').textContent = modelData.markerName;
+            
+            const time = new Date(modelData.timestamp);
+            const timeStr = time.toLocaleTimeString('es-ES');
+            document.getElementById('preview-time').textContent = timeStr;
+        }
+
+        function updateEnvironmentCounter() {
+            document.getElementById('model-counter').textContent = modelsInEnvironment.length;
+            document.getElementById('env-model-count').textContent = modelsInEnvironment.length;
+        }
+
+        function addToHistory(modelData) {
+            const historyEl = document.getElementById('model-history');
+            
+            if (historyEl.children[0]?.textContent.includes('Sin historial')) {
+                historyEl.innerHTML = '';
+            }
+
+            const time = new Date(modelData.timestamp);
+            const timeStr = time.toLocaleTimeString('es-ES');
+
+            const item = document.createElement('div');
+            item.className = 'model-item current';
+            item.innerHTML = `
+                <div>
+                    <div class="model-name">${modelData.name}</div>
+                    <div class="model-time">${modelData.markerName} • ${timeStr}</div>
+                </div>
+            `;
+
+            historyEl.insertBefore(item, historyEl.firstChild);
+
+            // Mantener solo últimos 10
+            while (historyEl.children.length > 10) {
+                historyEl.removeChild(historyEl.lastChild);
+            }
+
+            // Remover clase 'current' de otros items
+            document.querySelectorAll('.model-item').forEach((el, i) => {
+                if (i === 0) {
+                    el.classList.add('current');
+                } else {
+                    el.classList.remove('current');
+                }
+            });
+        }
+
+        // ==================== RENDER LOOPS ====================
+        function animateEnvironment() {
+            requestAnimationFrame(animateEnvironment);
+
+            if (environmentControls) {
+                environmentControls.update();
+            }
+
+            if (environmentRenderer && environmentScene && environmentCamera) {
+                environmentRenderer.render(environmentScene, environmentCamera);
+            }
+        }
+
+        function animatePreview() {
+            requestAnimationFrame(animatePreview);
+
+            if (currentModel) {
+                currentModel.rotation.y += 0.005;
+            }
+
+            if (previewRenderer && previewScene && previewCamera) {
+                previewRenderer.render(previewScene, previewCamera);
+            }
+        }
+
+        // ==================== EVENT LISTENERS ====================
+        document.getElementById('btn-add-model').addEventListener('click', addModelToEnvironment);
+        document.getElementById('btn-clear-all').addEventListener('click', clearAllModels);
+
+        // Verificar API cada 15 segundos
+        setInterval(checkAPIConnection, 15000);
+
+        // Manejar resize
+        window.addEventListener('resize', () => {
+            const envCanvas = document.getElementById('canvas-environment');
+            const previewCanvas = document.getElementById('canvas-preview');
+
+            if (environmentRenderer && environmentCamera) {
+                const w = envCanvas.clientWidth;
+                const h = envCanvas.clientHeight;
+                environmentRenderer.setSize(w, h);
+                environmentCamera.aspect = w / h;
+                environmentCamera.updateProjectionMatrix();
+            }
+
+            if (previewRenderer && previewCamera) {
+                const w = previewCanvas.clientWidth;
+                const h = previewCanvas.clientHeight;
+                previewRenderer.setSize(w, h);
+                previewCamera.aspect = w / h;
+                previewCamera.updateProjectionMatrix();
+            }
+        });
+
+        // ==================== INICIO ====================
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Testing API - Acuario AR</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.3em;
+        }
+
+        .test-section {
+            margin-bottom: 20px;
+        }
+
+        .test-section h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.05em;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        button {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f1f1f1;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #4ade80;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #22c55e;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(74, 222, 128, 0.4);
+        }
+
+        .btn-warning {
+            background: #fbbf24;
+            color: #333;
+        }
+
+        .btn-warning:hover {
+            background: #f59e0b;
+            transform: translateY(-2px);
+        }
+
+        .status-box {
+            background: #f9f9f9;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            max-height: 300px;
+            overflow-y: auto;
+            min-height: 100px;
+        }
+
+        .status-box.success {
+            border-color: #4ade80;
+            background: #f0fdf4;
+        }
+
+        .status-box.error {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        .status-box.info {
+            border-color: #3b82f6;
+            background: #eff6ff;
+        }
+
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            font-size: 0.9em;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            color: #999;
+            font-weight: bold;
+        }
+
+        .log-ok {
+            color: #22c55e;
+        }
+
+        .log-error {
+            color: #ef4444;
+        }
+
+        .log-info {
+            color: #3b82f6;
+        }
+
+        .info-box {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-size: 0.95em;
+            color: #1e40af;
+        }
+
+        .control-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        select, input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-family: inherit;
+        }
+
+        select {
+            background: white;
+            cursor: pointer;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .footer {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            color: #666;
+        }
+
+        .marker-button {
+            width: 100%;
+            padding: 15px;
+            margin: 5px 0;
+            font-size: 1.1em;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: #667eea;
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <h1>🧪 Testing API - Acuario AR</h1>
+            <p>Simula detecciones de marcadores y prueba integrando el flujo completo</p>
+        </div>
+
+        <div class="grid">
+            <!-- PANEL IZQUIERDO: SIMULADOR -->
+            <div class="card">
+                <h2>🎯 Simulador de Detecciones</h2>
+
+                <div class="info-box">
+                    💡 Esto simula lo que hace el Scanner AR (sin necesidad de tablet)
+                </div>
+
+                <div class="test-section">
+                    <h3>Seleccionar Marcador:</h3>
+                    <div class="control-row">
+                        <select id="marker-select">
+                            <option value="0">🐠 Pez (Pez1.glb)</option>
+                            <option value="1">🐢 Tortuga (tortuga.glb)</option>
+                            <option value="2">🦈 Tiburón (tiburon.glb)</option>
+                        </select>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn-success" onclick="sendMarkerDetection(0)">🐠 Enviar Pez</button>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn-success" onclick="sendMarkerDetection(1)">🐢 Enviar Tortuga</button>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn-success" onclick="sendMarkerDetection(2)">🦈 Enviar Tiburón</button>
+                    </div>
+                </div>
+
+                <div class="test-section">
+                    <h3>Testing Automático:</h3>
+                    <div class="button-group">
+                        <button class="btn-primary" onclick="runAutoTest()">▶️ Ejecutar Test</button>
+                        <button class="btn-secondary" onclick="stopAutoTest()">⏹️ Detener</button>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-bar-fill" id="progress"></div>
+                    </div>
+                </div>
+
+                <div class="test-section">
+                    <h3>API Status:</h3>
+                    <div class="button-group">
+                        <button class="btn-warning" onclick="checkAPIHealth()">📡 Verificar API</button>
+                    </div>
+                    <div class="status-box info" id="api-status">
+                        Esperando...
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL DERECHO: LOGS Y ESTADÍSTICAS -->
+            <div class="card">
+                <h2>📊 Estadísticas y Logs</h2>
+
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-sent">0</div>
+                        <div class="stat-label">Modelos Enviados</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="success-count">0</div>
+                        <div class="stat-label">Exitosos</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="failed-count">0</div>
+                        <div class="stat-label">Fallidos</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 20px; color: #333;">📋 Historial de Eventos:</h3>
+                <div class="status-box success" id="logs">
+                    <div class="log-entry log-info">
+                        <span class="log-time">[00:00:00]</span> Sistema inicializado
+                    </div>
+                </div>
+
+                <div class="button-group" style="margin-top: 15px;">
+                    <button class="btn-secondary" onclick="clearLogs()">🗑️ Limpiar Logs</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PANEL FULL WIDTH: RESPUESTAS DE API -->
+        <div class="card">
+            <h2>📬 Respuesta del Último Envío</h2>
+
+            <div class="control-row">
+                <button class="btn-primary" onclick="getLatestModel()">🔄 Obtener Último Modelo</button>
+                <button class="btn-primary" onclick="getHistory()">📜 Ver Historial</button>
+            </div>
+
+            <div class="status-box info" id="response-box">
+                <div class="log-entry log-info">
+                    Haz click en un botón para ver la respuesta
+                </div>
+            </div>
+        </div>
+
+        <!-- INSTRUCCIONES -->
+        <div class="card">
+            <h2>📖 Cómo Usar Este Testing</h2>
+
+            <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; line-height: 1.8;">
+                <h3 style="color: #333; margin-bottom: 15px;">Flujo de Testing:</h3>
+
+                <p><strong>1. Simular Detección (Opción A: Manual)</strong></p>
+                <ul style="margin-left: 20px; margin-bottom: 15px;">
+                    <li>Selecciona un marcador (Pez, Tortuga, Tiburón)</li>
+                    <li>Click en el botón para enviar</li>
+                    <li>Verás automáticamente el resultado en "Estadísticas"</li>
+                </ul>
+
+                <p><strong>2. Simular Detección (Opción B: Automático)</strong></p>
+                <ul style="margin-left: 20px; margin-bottom: 15px;">
+                    <li>Click "▶️ Ejecutar Test"</li>
+                    <li>Enviará automáticamente 3 modelos (uno cada 2 segundos)</li>
+                    <li>Verás toda la progresión en los logs</li>
+                </ul>
+
+                <p><strong>3. Verificar API</strong></p>
+                <ul style="margin-left: 20px; margin-bottom: 15px;">
+                    <li>Click "📡 Verificar API" para health check</li>
+                    <li>Si verde ✅ → API activa y funcionando</li>
+                    <li>Si rojo ❌ → Ejecutar: <code>cd api && npm start</code></li>
+                </ul>
+
+                <p><strong>4. Ver Respuestas</strong></p>
+                <ul style="margin-left: 20px; margin-bottom: 15px;">
+                    <li>Click "🔄 Obtener Último Modelo" para ver qué envió el Scanner</li>
+                    <li>Click "📜 Ver Historial" para ver todos los modelos</li>
+                </ul>
+
+                <p><strong>5. Verificar Visualizador</strong></p>
+                <ul style="margin-left: 20px;">
+                    <li>Abre el Visualizador en otra pestaña: <a href="http://localhost:8000/app-visualizer/" target="_blank" style="color: #667eea;">app-visualizer/</a></li>
+                    <li>Cuando envíes un modelo aquí, debería aparecer automáticamente</li>
+                    <li>Esto verifica que el polling funciona(cada 2 segundos)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <p>🌊 Acuario AR Testing Interface v1.0</p>
+            <p>Servicios requeridos:</p>
+            <p>
+                <strong>API:</strong> http://localhost:3001 | 
+                <strong>Web:</strong> http://localhost:8000 | 
+                <strong>Visualizador:</strong> <a href="http://localhost:8000/app-visualizer/" target="_blank" style="color: #667eea;">app-visualizer/</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ==================== CONFIGURACIÓN ====================
+        const API_BASE_URL = 'http://localhost:3001/api';
+        const MODELS_CONFIG = {
+            0: { name: 'Pez', model: 'Pez1.glb', icon: '🐠' },
+            1: { name: 'Tortuga', model: 'tortuga.glb', icon: '🐢' },
+            2: { name: 'Tiburón', model: 'tiburon.glb', icon: '🦈' }
+        };
+
+        // ==================== ESTADO ====================
+        let stats = {
+            totalSent: 0,
+            successCount: 0,
+            failedCount: 0
+        };
+        let autoTestRunning = false;
+
+        // ==================== FUNCIONES ====================
+
+        function log(message, type = 'info') {
+            const logsBox = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString('es-ES');
+            
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.innerHTML = `<span class="log-time">[${timestamp}]</span> ${message}`;
+            
+            logsBox.appendChild(entry);
+            logsBox.scrollTop = logsBox.scrollHeight;
+        }
+
+        function updateStats() {
+            document.getElementById('total-sent').textContent = stats.totalSent;
+            document.getElementById('success-count').textContent = stats.successCount;
+            document.getElementById('failed-count').textContent = stats.failedCount;
+        }
+
+        function displayResponse(data, type = 'success') {
+            const responseBox = document.getElementById('response-box');
+            responseBox.className = `status-box ${type}`;
+            responseBox.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        async function sendMarkerDetection(markerIndex) {
+            const config = MODELS_CONFIG[markerIndex];
+            
+            log(`📤 Enviando: ${config.icon} ${config.name}`, 'info');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/send-model`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: config.model,
+                        path: config.model,
+                        markerName: config.name
+                    })
+                });
+
+                const data = await response.json();
+
+                stats.totalSent++;
+
+                if (data.success) {
+                    stats.successCount++;
+                    log(`✅ ${config.icon} ${config.name} enviado correctamente`, 'ok');
+                    displayResponse(data.data, 'success');
+                } else {
+                    stats.failedCount++;
+                    log(`❌ Error: ${data.error}`, 'error');
+                    displayResponse(data, 'error');
+                }
+
+                updateStats();
+
+            } catch (error) {
+                stats.failedCount++;
+                log(`❌ Error de conexión: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'error');
+                updateStats();
+            }
+        }
+
+        async function checkAPIHealth() {
+            log('🔍 Verificando API...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+
+                if (data.success) {
+                    log('✅ API activa y funcionando', 'ok');
+                    document.getElementById('api-status').className = 'status-box success';
+                    document.getElementById('api-status').textContent = 
+                        `✅ API ACTIVA\nStatus: ${data.status}\nUptime: ${data.uptime.toFixed(2)}s`;
+                    displayResponse(data, 'success');
+                } else {
+                    throw new Error('API no respondió correctamente');
+                }
+
+            } catch (error) {
+                log(`❌ API desconectada: ${error.message}`, 'error');
+                document.getElementById('api-status').className = 'status-box error';
+                document.getElementById('api-status').textContent = 
+                    `❌ API DESCONECTADA\nError: ${error.message}\n\nAsegúrate de ejecutar:\ncd api && npm start`;
+                displayResponse({ error: error.message }, 'error');
+            }
+        }
+
+        async function getLatestModel() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/latest-model`);
+                const data = await response.json();
+
+                if (data.data) {
+                    log(`📥 Último modelo: ${data.data.name}`, 'ok');
+                    displayResponse(data.data, 'success');
+                } else {
+                    log('⏳ No hay modelo aún', 'info');
+                    displayResponse({ message: 'No hay modelo disponible aún' }, 'info');
+                }
+
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'error');
+            }
+        }
+
+        async function getHistory() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/history?limit=5`);
+                const data = await response.json();
+
+                log(`📜 Obteniendo historial (${data.total} total)`, 'info');
+                displayResponse(data, 'success');
+
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+                displayResponse({ error: error.message }, 'error');
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = 
+                '<div class="log-entry log-info"><span class="log-time">[' + 
+                new Date().toLocaleTimeString('es-ES') + 
+                ']</span> Logs limpiados</div>';
+            log('Logs limpiados', 'info');
+        }
+
+        async function runAutoTest() {
+            if (autoTestRunning) return;
+            autoTestRunning = true;
+
+            log('🚀 Iniciando test automático...', 'info');
+            const markers = [0, 1, 2];
+
+            for (let i = 0; i < markers.length; i++) {
+                const progress = (i / markers.length) * 100;
+                document.getElementById('progress').style.width = progress + '%';
+
+                await sendMarkerDetection(markers[i]);
+                
+                if (i < markers.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            }
+
+            document.getElementById('progress').style.width = '100%';
+            log('✅ Test automático completado', 'ok');
+            autoTestRunning = false;
+        }
+
+        function stopAutoTest() {
+            autoTestRunning = false;
+            log('⏹️ Test detenido', 'info');
+            document.getElementById('progress').style.width = '0%';
+        }
+
+        // ==================== INICIALIZACIÓN ====================
+        window.addEventListener('load', () => {
+            log('🌊 Acuario Testing Interface iniciada', 'info');
+            checkAPIHealth();
+        });
+    </script>
+</body>
+</html>
