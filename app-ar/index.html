@@ -2,15 +2,20 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>🎯 Scanner AR - Acuario</title>
     
-    <!-- Three.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    
-    <!-- MindAR -->
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar-image-three.prod.js"></script>
-    
+    <!-- Import Map - MindAR v1.2.5 oficial con THREE.js 0.160 -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+            "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+        }
+    }
+    </script>
+
     <style>
         * {
             margin: 0;
@@ -18,634 +23,317 @@
             box-sizing: border-box;
         }
 
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
-
-        .header {
-            color: white;
-            text-align: center;
-            margin-bottom: 30px;
-            animation: slideDown 0.6s ease-out;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
-
-        .container {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
-            max-width: 600px;
-            width: 100%;
-            animation: fadeIn 0.8s ease-out;
-        }
-
-        .ar-viewport {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 9/16;
             background: #000;
-            overflow: hidden;
         }
 
-        #canvas-ar {
+        #ar-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        canvas {
             width: 100%;
             height: 100%;
             display: block;
         }
 
-        .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 20px;
-            pointer-events: none;
-        }
-
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 15px;
-            border-radius: 10px;
-            backdrop-filter: blur(10px);
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .status-panel {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.9);
             color: white;
-            font-weight: 600;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            min-width: 300px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
-        .dot {
-            width: 12px;
-            height: 12px;
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 8px 0;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background: #ff4444;
-            animation: pulse 2s infinite;
+            display: inline-block;
+            flex-shrink: 0;
         }
 
-        .dot.detected {
+        .dot-active {
             background: #4ade80;
-            animation: none;
-            box-shadow: 0 0 15px rgba(74, 222, 128, 0.8);
+            box-shadow: 0 0 10px #4ade80;
         }
 
-        .crosshair {
-            position: absolute;
-            top: 50%;
+        .dot-inactive {
+            background: #ef4444;
+        }
+
+        .dot-pending {
+            background: #eab308;
+            animation: pulse 1.5s infinite;
+        }
+
+        .fps-counter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #4ade80;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            font-weight: bold;
+            z-index: 100;
+        }
+
+        .detection-banner {
+            position: fixed;
+            bottom: 40px;
             left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80px;
-            height: 80px;
-            border: 2px solid rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        .crosshair::before,
-        .crosshair::after {
-            content: '';
-            position: absolute;
-            background: rgba(255, 255, 255, 0.5);
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        .crosshair::before {
-            width: 40px;
-            height: 2px;
-        }
-
-        .crosshair::after {
-            width: 2px;
-            height: 40px;
-        }
-
-        .model-detected {
-            background: rgba(76, 175, 80, 0.9);
-            padding: 15px 20px;
-            border-radius: 10px;
-            backdrop-filter: blur(10px);
+            transform: translateX(-50%);
+            background: rgba(74, 222, 128, 0.95);
             color: white;
-            font-weight: 600;
-            animation: slideUp 0.4s ease-out;
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 16px;
+            z-index: 100;
+            animation: slideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 10px 30px rgba(74, 222, 128, 0.3);
         }
 
-        .model-detected-hidden {
+        .detection-banner.hidden {
             display: none;
         }
 
-        .bottom-info {
-            background: rgba(0, 0, 0, 0.5);
-            padding: 15px;
-            border-radius: 10px;
-            backdrop-filter: blur(10px);
+        .error-banner {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(200, 30, 30, 0.95);
             color: white;
-            font-size: 0.9em;
-            line-height: 1.6;
+            padding: 25px 35px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 200;
+            max-width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
         }
 
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            margin: 5px 0;
-        }
-
-        .info-label {
-            font-weight: 600;
-            color: #4ade80;
-        }
-
-        .info-value {
-            text-align: right;
-            opacity: 0.9;
-        }
-
-        .controls {
-            padding: 25px;
-            background: #f8f9fa;
-        }
-
-        .controls h2 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 1.2em;
-        }
-
-        .info-box {
-            background: #e3f2fd;
-            border-left: 4px solid #667eea;
-            padding: 15px;
-            border-radius: 6px;
-            color: #1565c0;
-            font-size: 0.95em;
-            line-height: 1.6;
-            margin-bottom: 20px;
-        }
-
-        .target-list {
-            background: white;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-
-        .target-item {
-            padding: 10px;
-            margin: 5px 0;
-            background: #f5f5f5;
-            border-radius: 6px;
-            font-size: 0.9em;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .target-icon {
-            font-size: 1.2em;
-        }
-
-        .api-status {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 0.9em;
-            margin-top: 15px;
-            color: #856404;
-        }
-
-        .api-status.connected {
-            background: #d4edda;
-            border-left-color: #4ade80;
-            color: #155724;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
+        .error-banner h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
         }
 
         @keyframes slideUp {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translate(-50%, 20px);
             }
             to {
                 opacity: 1;
-                transform: translateY(0);
+                transform: translate(-50%, 0);
             }
         }
 
         @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.5;
-            }
-        }
-
-        @media (max-width: 640px) {
-            .header h1 {
-                font-size: 2em;
-            }
-
-            .controls {
-                padding: 20px;
-            }
-
-            .info-box {
-                font-size: 0.85em;
-            }
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🎯 Scanner AR</h1>
-        <p>Apunta a los marcadores para detectar modelos 3D</p>
-    </div>
+    <div id="ar-container"></div>
 
-    <div class="container">
-        <!-- AR VIEWPORT -->
-        <div class="ar-viewport">
-            <canvas id="canvas-ar"></canvas>
-            
-            <div class="overlay">
-                <!-- TOP BAR -->
-                <div>
-                    <div class="top-bar">
-                        <div class="status-indicator">
-                            <div class="dot" id="status-dot"></div>
-                            <span id="status-text">Escaneando...</span>
-                        </div>
-                        <span style="color: white; font-weight: 600;" id="fps-counter">FPS: 0</span>
-                    </div>
-                </div>
-
-                <!-- CENTER CROSSHAIR -->
-                <div class="crosshair"></div>
-
-                <!-- MODEL DETECTED NOTIFICATION -->
-                <div style="text-align: center;">
-                    <div class="model-detected model-detected-hidden" id="model-detected-alert">
-                        ✅ Modelo detectado: <span id="detected-model-name">-</span>
-                    </div>
-                </div>
-
-                <!-- BOTTOM INFO -->
-                <div class="bottom-info">
-                    <div class="info-row">
-                        <span class="info-label">Estado:</span>
-                        <span class="info-value" id="bottom-status">Inicializando...</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Modelo:</span>
-                        <span class="info-value" id="bottom-model">-</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Marcador:</span>
-                        <span class="info-value" id="bottom-marker">-</span>
-                    </div>
-                </div>
-            </div>
+    <!-- Status Panel -->
+    <div class="status-panel">
+        <div class="status-row">
+            <span class="status-dot dot-pending" id="mindar-dot"></span>
+            <span id="mindar-text">Iniciando MindAR...</span>
         </div>
-
-        <!-- CONTROLES -->
-        <div class="controls">
-            <h2>⚙️ Configuración</h2>
-
-            <div class="info-box">
-                📱 <strong>Cómo usar:</strong><br>
-                1. Apunta la cámara a un marcador<br>
-                2. El sistema detectará automáticamente<br>
-                3. El modelo se enviará a la visualización
-            </div>
-
-            <div class="target-list">
-                <strong style="color: #333; display: block; margin-bottom: 10px;">📍 Marcadores disponibles:</strong>
-                <div class="target-item">
-                    <span class="target-icon">🐠</span>
-                    <span>Pez</span>
-                </div>
-                <div class="target-item">
-                    <span class="target-icon">🐢</span>
-                    <span>Tortuga</span>
-                </div>
-                <div class="target-item">
-                    <span class="target-icon">🦈</span>
-                    <span>Tiburón</span>
-                </div>
-            </div>
-
-            <div class="api-status" id="api-status">
-                🔌 Conectando a API...
-            </div>
+        <div class="status-row">
+            <span class="status-dot dot-inactive" id="camera-dot"></span>
+            <span id="camera-text">Cámara: Esperando</span>
+        </div>
+        <div class="status-row">
+            <span class="status-dot dot-inactive" id="api-dot"></span>
+            <span id="api-text">API: Desconectada</span>
         </div>
     </div>
 
-    <script>
-        // ==================== CONFIGURACIÓN ====================
-        const API_BASE_URL = 'http://localhost:3001/api';
+    <!-- FPS Counter -->
+    <div class="fps-counter" id="fps">FPS: 0</div>
 
-        // Mapeo de marcadores a modelos
-        const MARKERS_CONFIG = {
-            0: { name: 'Pez', model: 'Pez1.glb', icon: '🐠' },
-            1: { name: 'Tortuga', model: 'tortuga.glb', icon: '🐢' },
-            2: { name: 'Tiburón', model: 'tiburon.glb', icon: '🦈' }
+    <!-- Detection Banner -->
+    <div class="detection-banner hidden" id="detection-banner">
+        <span id="detection-content">🐢 Detectado</span>
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { MindARThree } from 'mindar-image-three';
+
+        // ==================== CONFIG ====================
+        const API_BASE_URL = 'http://192.168.40.11:3001/api';
+        const TARGETS_FILE = 'TURTLE MARK.mind';
+
+        const MARKERS = {
+            0: { name: 'Tortuga', model: 'TURTLE.glb', icon: '🐢' }
         };
 
-        // ==================== VARIABLES DE ESTADO ====================
-        let mindarController = null;
-        let scene, camera, renderer;
-        let lastDetectedMarker = null;
-        let lastModelSentTime = 0;
-        const SEND_COOLDOWN = 3000; // 3 segundos entre envíos
+        // ==================== STATE ====================
+        let mindarApp = null;
         let apiConnected = false;
-        let frameCount = 0;
-        let lastFpsUpdate = Date.now();
+        let lastDetectTime = 0;
+        let frameCount = 0, fpsTime = Date.now();
 
-        // ==================== INICIALIZACIÓN ====================
+        // ==================== UI ====================
+        function updateDot(dotId, state) {
+            const dot = document.getElementById(dotId);
+            dot.className = `status-dot dot-${state}`;
+        }
+
+        function updateText(textId, text) {
+            document.getElementById(textId).textContent = text;
+        }
+
+        function showNotif(icon, name) {
+            const banner = document.getElementById('detection-banner');
+            const content = document.getElementById('detection-content');
+            content.textContent = `${icon} ${name} detectado`;
+            banner.classList.remove('hidden');
+            setTimeout(() => banner.classList.add('hidden'), 2000);
+        }
+
+        function showError(msg) {
+            const err = document.createElement('div');
+            err.className = 'error-banner';
+            err.innerHTML = `<h3>⚠️ Error</h3><p>${msg}</p>`;
+            document.body.appendChild(err);
+            setTimeout(() => err.remove(), 5000);
+        }
+
+        // ==================== API ====================
+        async function checkAPI() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/health`);
+                if (res.ok) {
+                    apiConnected = true;
+                    updateDot('api-dot', 'active');
+                    updateText('api-text', '✅ API Conectada');
+                    console.log('✅ API OK');
+                    return;
+                }
+            } catch (e) {
+                console.log('API check failed:', e.message);
+            }
+            apiConnected = false;
+            updateDot('api-dot', 'inactive');
+            updateText('api-text', '❌ API Desconectada');
+            setTimeout(checkAPI, 5000);
+        }
+
+        async function sendModel(idx, name, model) {
+            if (!apiConnected) return;
+            try {
+                await fetch(`${API_BASE_URL}/send-model`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ markerIndex: idx, markerName: name, model })
+                });
+                console.log('📤 Enviado:', name);
+            } catch (e) {
+                console.error('❌ Send failed:', e);
+            }
+        }
+
+        // ==================== AR INIT ====================
         async function init() {
             try {
-                // Verificar conexión con API
-                await checkAPIConnection();
+                updateText('mindar-text', 'Cargando targets...');
 
-                // Inicializar Three.js
-                initThreeJS();
-
-                // Inicializar MindAR
-                await initMindAR();
-
-                updateStatus('Listo', true);
-                console.log('✅ Sistem inicializado correctamente');
-
-            } catch (error) {
-                console.error('❌ Error en inicialización:', error);
-                updateStatus('Error: ' + error.message, false);
-            }
-        }
-
-        function initThreeJS() {
-            const canvas = document.getElementById('canvas-ar');
-            
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(
-                75,
-                canvas.clientWidth / canvas.clientHeight,
-                0.1,
-                1000
-            );
-            
-            renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-            renderer.setClearColor(0x000000);
-
-            // Luces básicas
-            const light = new THREE.HemisphereLight(0xffffff, 0x000000, 1);
-            scene.add(light);
-
-            // Iniciar render loop
-            animate();
-        }
-
-        async function initMindAR() {
-            try {
-                mindarController = new window.MINDAR.IMAGE.Controller({
-                    imageSource: document.getElementById('canvas-ar'),
-                    debugMode: false
+                mindarApp = new MindARThree({
+                    container: document.querySelector('#ar-container'),
+                    imageSource: TARGETS_FILE,
+                    maxTrack: 1
                 });
 
-                // Cargar targets.mind (debe estar en la carpeta raíz o ruta accesible)
-                await mindarController.addImageTargets('targets.mind');
-                
-                mindarController.addEventListener('targetFound', onTargetFound);
-                mindarController.addEventListener('targetLost', onTargetLost);
+                const { scene, renderer, camera } = mindarApp;
 
-                // Iniciar el controlador
-                await mindarController.start();
+                // Add lights
+                const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
+                scene.add(light);
 
-                console.log('✅ MindAR inicializado');
-
-            } catch (error) {
-                console.error('❌ Error al inicializar MindAR:', error);
-                throw new Error('No se pudo inicializar MindAR');
-            }
-        }
-
-        // ==================== DETECCIÓN DE MARCADORES ====================
-        function onTargetFound(event) {
-            const targetIndex = event.targetIndex;
-            const markerConfig = MARKERS_CONFIG[targetIndex];
-
-            if (!markerConfig) {
-                console.warn('⚠️ Marcador desconocido:', targetIndex);
-                return;
-            }
-
-            lastDetectedMarker = {
-                index: targetIndex,
-                name: markerConfig.name,
-                model: markerConfig.model,
-                icon: markerConfig.icon
-            };
-
-            console.log(`✅ Detectado: ${markerConfig.icon} ${markerConfig.name}`);
-            updateDetectionUI(markerConfig);
-
-            // Enviar al servidor
-            sendModelToAPI(markerConfig.model, markerConfig.name);
-        }
-
-        function onTargetLost(event) {
-            const targetIndex = event.targetIndex;
-            console.log('⚠️ Marcador perdido:', targetIndex);
-            
-            document.getElementById('model-detected-alert').classList.add('model-detected-hidden');
-            document.getElementById('status-dot').classList.remove('detected');
-            updateBottomInfo('-', '-');
-        }
-
-        // ==================== COMUNICACIÓN CON API ====================
-        async function checkAPIConnection() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/health`);
-                if (response.ok) {
-                    apiConnected = true;
-                    updateAPIStatus(true);
-                    console.log('✅ API conectada');
-                } else {
-                    throw new Error('API no responde');
-                }
-            } catch (error) {
-                console.error('❌ Error de conexión con API:', error);
-                apiConnected = false;
-                updateAPIStatus(false);
-            }
-        }
-
-        async function sendModelToAPI(modelPath, markerName) {
-            const now = Date.now();
-            
-            // Cooldown para evitar spam
-            if (now - lastModelSentTime < SEND_COOLDOWN) {
-                console.log('⏱️ Esperando antes de enviar nuevamente...');
-                return;
-            }
-
-            if (!apiConnected) {
-                console.warn('⚠️ API no conectada, no se puede enviar el modelo');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/send-model`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        name: modelPath.split('/').pop(), // Nombre del archivo
-                        path: modelPath,
-                        markerName: markerName
-                    })
+                // Event listeners
+                Object.keys(MARKERS).forEach(idx => {
+                    mindarApp.addEventListener('targetFound', (e) => {
+                        if (e.detail.targetIndex == idx) {
+                            const m = MARKERS[idx];
+                            const now = Date.now();
+                            if (now - lastDetectTime > 3000) {
+                                lastDetectTime = now;
+                                console.log(`✅ ${m.icon} ${m.name}`);
+                                showNotif(m.icon, m.name);
+                                sendModel(idx, m.name, m.model);
+                            }
+                        }
+                    });
                 });
 
-                const data = await response.json();
+                updateDot('mindar-dot', 'active');
+                updateText('mindar-text', '✅ MindAR Listo');
+                updateDot('camera-dot', 'active');
+                updateText('camera-text', '✅ Cámara Activa');
 
-                if (data.success) {
-                    lastModelSentTime = now;
-                    console.log('✅ Modelo enviado a API:', data.data);
-                } else {
-                    console.error('❌ Error en respuesta de API:', data.error);
-                }
+                checkAPI();
 
-            } catch (error) {
-                console.error('❌ Error al enviar modelo:', error);
-                updateAPIStatus(false);
+                // Start AR
+                await mindarApp.start();
+
+                // Render loop
+                renderer.setAnimationLoop(() => {
+                    frameCount++;
+                    const now = Date.now();
+                    if (now - fpsTime > 1000) {
+                        document.getElementById('fps').textContent = `FPS: ${frameCount}`;
+                        frameCount = 0;
+                        fpsTime = now;
+                    }
+                    renderer.render(scene, camera);
+                });
+
+                console.log('✅ Sistema listo');
+
+            } catch (e) {
+                console.error('❌ Init error:', e);
+                updateDot('mindar-dot', 'inactive');
+                updateText('mindar-text', '❌ Error');
+                showError(e.message);
             }
         }
 
-        // ==================== ACTUALIZACIÓN DE UI ====================
-        function updateDetectionUI(markerConfig) {
-            const alert = document.getElementById('model-detected-alert');
-            const nameSpan = document.getElementById('detected-model-name');
-            
-            nameSpan.textContent = `${markerConfig.icon} ${markerConfig.name}`;
-            alert.classList.remove('model-detected-hidden');
-
-            // Animar el punto de estado
-            const dot = document.getElementById('status-dot');
-            dot.classList.add('detected');
-
-            // Actualizar info inferior
-            updateBottomInfo(markerConfig.model, markerConfig.name);
-
-            // Ocultar notificación después de 2 segundos
-            setTimeout(() => {
-                alert.classList.add('model-detected-hidden');
-            }, 2000);
-        }
-
-        function updateBottomInfo(model, marker) {
-            document.getElementById('bottom-model').textContent = model || '-';
-            document.getElementById('bottom-marker').textContent = marker || '-';
-        }
-
-        function updateStatus(text, isActive) {
-            document.getElementById('status-text').textContent = text;
-            const dot = document.getElementById('status-dot');
-            
-            if (isActive) {
-                dot.classList.add('detected');
-            } else {
-                dot.classList.remove('detected');
-            }
-        }
-
-        function updateAPIStatus(connected) {
-            const statusEl = document.getElementById('api-status');
-            
-            if (connected) {
-                statusEl.textContent = '✅ API conectada';
-                statusEl.classList.add('connected');
-            } else {
-                statusEl.textContent = '❌ API desconectada';
-                statusEl.classList.remove('connected');
-            }
-        }
-
-        function updateFPS() {
-            frameCount++;
-            const now = Date.now();
-            const elapsed = now - lastFpsUpdate;
-
-            if (elapsed >= 1000) {
-                const fps = Math.round((frameCount * 1000) / elapsed);
-                document.getElementById('fps-counter').textContent = `FPS: ${fps}`;
-                frameCount = 0;
-                lastFpsUpdate = now;
-            }
-        }
-
-        // ==================== RENDER LOOP ====================
-        function animate() {
-            requestAnimationFrame(animate);
-            
-            if (renderer && scene && camera) {
-                renderer.render(scene, camera);
-                updateFPS();
-            }
-        }
-
-        // ==================== INICIO ====================
         window.addEventListener('load', init);
-
-        // Verificar API cada 10 segundos
-        setInterval(checkAPIConnection, 10000);
     </script>
 </body>
 </html>
