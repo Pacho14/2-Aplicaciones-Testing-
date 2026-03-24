@@ -279,26 +279,45 @@
                     maxTrack: 1
                 });
 
-                const { scene, renderer, camera } = mindarApp;
+                const { scene, renderer, camera, controller } = mindarApp;
 
                 // Add lights
                 const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
                 scene.add(light);
 
-                // Event listeners
+                // Create anchors for each target
                 Object.keys(MARKERS).forEach(idx => {
-                    mindarApp.addEventListener('targetFound', (e) => {
-                        if (e.detail.targetIndex == idx) {
-                            const m = MARKERS[idx];
+                    const anchor = controller.addAnchor(parseInt(idx));
+                    const markerData = MARKERS[idx];
+                    
+                    // Track detection with anchor visibility
+                    let wasVisible = false;
+                    
+                    const originalUpdateWorldMatrix = anchor.updateWorldMatrix;
+                    anchor.updateWorldMatrix = function(force, recurse) {
+                        originalUpdateWorldMatrix.call(this, force, recurse);
+                        
+                        // Check if anchor is visible (has valid position)
+                        const isVisible = Math.abs(this.position.x) > 0.001 || 
+                                         Math.abs(this.position.y) > 0.001 || 
+                                         Math.abs(this.position.z) > 0.001;
+                        
+                        if (isVisible && !wasVisible) {
+                            // Target found
                             const now = Date.now();
                             if (now - lastDetectTime > 3000) {
                                 lastDetectTime = now;
-                                console.log(`✅ ${m.icon} ${m.name}`);
-                                showNotif(m.icon, m.name);
-                                sendModel(idx, m.name, m.model);
+                                console.log(`✅ ${markerData.icon} ${markerData.name}`);
+                                showNotif(markerData.icon, markerData.name);
+                                sendModel(idx, markerData.name, markerData.model);
                             }
+                            wasVisible = true;
+                        } else if (!isVisible && wasVisible) {
+                            // Target lost
+                            console.log(`⚠️ ${markerData.name} lost`);
+                            wasVisible = false;
                         }
-                    });
+                    };
                 });
 
                 updateDot('mindar-dot', 'active');
@@ -312,6 +331,7 @@
                 await mindarApp.start();
 
                 // Render loop
+                let lastRaw = Date.now();
                 renderer.setAnimationLoop(() => {
                     frameCount++;
                     const now = Date.now();
